@@ -20,8 +20,7 @@ agent-skills run "optimize this SQL query"
 ## ✨ Features
 
 * 🧠 50+ prebuilt developer skills
-* 🤖 Multi-LLM support (Claude, Gemini, OpenAI)
-* ⚡ Auto skill routing (no manual selection)
+* 🤖 Multi-LLM support (Claude, Gemini)
 * 📦 CLI-first workflow
 * 🔄 Sync & versioning system
 * 🎯 Selective install support
@@ -50,20 +49,7 @@ npm install -g agent-skills
 ### Run a skill
 
 ```bash
-agent-skills run "optimize this code"
-```
-
-### Explain code from file
-
-```bash
-agent-skills run "explain this code" --file app.js
-```
-
-### Use specific model
-
-```bash
-agent-skills run "design api" -gemini
-agent-skills run "review this PR" -claude
+Use CodeSage to explain the code
 ```
 
 ---
@@ -86,9 +72,6 @@ agent-skills run "review this PR" -claude
 | ------- | -------------------- |
 | -gemini | Use Gemini           |
 | -claude | Use Claude           |
-| -openai | Use OpenAI (default) |
-| --file  | Load file input      |
-| --input | Load text file       |
 | --force | Overwrite existing   |
 
 ---
@@ -140,15 +123,6 @@ agent-skills sync
 
 ---
 
-## 🧠 How It Works
-
-1. You run a query
-2. Router selects best skill
-3. Prompt is generated
-4. LLM executes it
-5. Output is returned
-
----
 
 ## 🧠 Skills Catalog
 
@@ -479,26 +453,12 @@ agent-skills sync
 
 ## 🤖 Supported Models
 
-* OpenAI (GPT)
 * Claude (Anthropic)
 * Gemini (Google)
 
 ---
 
-## 🛠 Programmatic Usage
 
-```js
-const { runWithOpenAI } = require("agent-skills");
-
-const res = await runWithOpenAI(
-  "optimize this code",
-  { code: "for(let i=0;i<100000;i++){}" }
-);
-
-console.log(res);
-```
-
----
 
 ## 🧱 Create Your Own Skill
 
