@@ -12,7 +12,6 @@
 
 ```bash
 npx agent-skills install
-agent-skills run "optimize this SQL query"
 ```
 
 ---
