@@ -1,6 +1,6 @@
 # 🧠 Agent Skills
 
-> Install and run AI-powered developer skills across Claude, Gemini, and OpenAI.
+> Install and run AI-powered developer skills across Claude and Gemini.
 
 ⚡ Turn prompts into reusable, installable skills
 ⚡ Works from CLI in seconds
