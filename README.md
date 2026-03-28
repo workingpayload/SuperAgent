@@ -18,7 +18,7 @@ npx @workingpayload/agent-skills install
 
 ## ✨ Features
 
-* 🧠 54 expert-level developer skills with named tools, concrete steps, and edge case coverage
+* 🧠 55 expert-level developer skills with named tools, concrete steps, and edge case coverage
 * 🤖 Multi-LLM support (Claude, Gemini, Google Antigravity)
 * 📦 CLI-first workflow with install, route, doctor, and score commands
 * 🔄 Versioning & health checks for installed skills
@@ -81,6 +81,18 @@ After installing, invoke skills as slash commands:
 /dockmaster        → "Optimize my Dockerfile"
 /kubecrafter       → "Write a Deployment manifest with HPA"
 ```
+
+### Use skills in Google Antigravity
+
+After installing with `-t antigravity`, skills are available automatically via semantic triggering — no slash commands needed. The Antigravity agent reads skill descriptions and matches them to your task:
+
+```
+"Review this function for security issues"   → agent activates CodeSage skill
+"Debug this failing test"                    → agent activates BugHunter Pro skill
+"Generate a codemap for this repo"           → agent activates CodeMap skill
+```
+
+Skills are installed as directories under `~/.gemini/antigravity/skills/`, each containing a `SKILL.md` and optional `scripts/`, `references/`, and `assets/` subdirectories.
 
 ### Find the right skill
 
@@ -335,6 +347,7 @@ Run: `ruff check`, `mypy --strict`, `bandit -r .`...
 | **FeatureSmith** | `/featuresmith` | Requirement decomposition: user stories, story points, feature flags (LaunchDarkly/Unleash) |
 | **PolyglotShift** | `/polyglotshift` | Code translation between languages preserving idioms and type systems |
 | **PromptForge** | `/promptforge` | LLM prompt engineering: CoT, ReAct, few-shot, multi-modal, function-calling |
+| **CodeMap** | `/codemap` | Generates structured codemap files at checkpoints for instant AI agent codebase navigation |
 | **ScrapeMaster** | `/scrapemaster` | Web scraping: Playwright/Cheerio/BeautifulSoup, robots.txt, retry/backoff |
 
 ---
@@ -395,18 +408,19 @@ Prompt engineering is repetitive.
 Agent Skills turns prompts into:
 
 * reusable skills with named tools and concrete steps
-* installable CLI commands for Claude and Gemini
+* installable CLI commands for Claude, Gemini, and Google Antigravity
 * quality-gated, version-tracked AI workflows
 
 ---
 
 ## 🚀 Roadmap
 
-* [x] 54 expert-level skills with edge case coverage
+* [x] 55 expert-level skills with edge case coverage
 * [x] CLI with install, route, doctor, score commands
 * [x] Quality tooling (linter, scorer, adversarial tests)
 * [x] Machine-readable skill index (skills.json)
 * [x] GitHub Actions CI pipeline
+* [x] Google Antigravity IDE integration (directory-based skills with semantic triggering)
 * [ ] Skill marketplace
 * [ ] Web UI playground
 * [ ] Skill chaining
