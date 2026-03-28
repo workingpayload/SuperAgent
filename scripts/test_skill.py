@@ -88,6 +88,25 @@ def count_named_tools(text: str) -> int:
         r"\bgit\b", r"\bnginx\b", r"\bapache\b", r"\bkafka\b", r"\brabbitmq\b",
         r"\bcelery\b", r"\bsqlalchemy\b", r"\bprisma\b", r"\bdrizzle\b",
         r"\bstorybook\b", r"\bfigma\b",
+        # Additional tools/frameworks
+        r"\bpydantic\b", r"\bfastapi\b", r"\bflask\b", r"\bdjango\b", r"\bexpress\b",
+        r"\bspring\b", r"\brails\b", r"\blaravel\b",
+        r"\balembic\b", r"\bflyway\b", r"\bknex\b", r"\btypeorm\b", r"\bsequelize\b",
+        r"\bgrpc\b", r"\bgraphql\b", r"\bopenapi\b", r"\bswagger\b",
+        r"\bzod\b", r"\bjoi\b", r"\byup\b",
+        r"\bbullmq\b", r"\btemporal\b", r"\bsidekiq\b",
+        r"\bsentry\b", r"\bjaeger\b", r"\bloki\b", r"\btempo\b",
+        r"\bpandas\b", r"\bpolars\b", r"\bnumpy\b",
+        r"\bcurl\b", r"\bpostman\b", r"\binsomnia\b",
+        r"\bcheerio\b", r"\bbeautifulsoup\b", r"\bscrapy\b",
+        r"\bshellcheck\b", r"\bbash\b", r"\bpowershell\b",
+        r"\bjson\b", r"\byaml\b", r"\btoml\b",
+        r"\bsemver\b", r"\bconventional commit\b",
+        r"\blaunchdarkly\b", r"\bunleash\b",
+        r"\bargocd\b", r"\bflux\b",
+        r"\bcss\b", r"\bhtml\b", r"\bsass\b", r"\bless\b",
+        r"\bnpm\b", r"\byarn\b", r"\bpnpm\b", r"\buv\b", r"\bpoetry\b", r"\bpip\b",
+        r"\bcargo\b", r"\bmaven\b", r"\bgradle\b",
     ]
     lower = text.lower()
     return sum(1 for pattern in known_tools if re.search(pattern, lower))
@@ -104,6 +123,14 @@ def count_edge_cases(text: str) -> int:
         r"\boff-by-one\b", r"\btruncati\b", r"\bspecial character\b",
         r"\bunicode\b", r"\butf-?8\b", r"\blarge file\b", r"\bempty list\b",
         r"\bnegative\b", r"\bwhen .{1,40} is (empty|null|missing|invalid|zero)",
+        # Additional patterns for edge-case-like content
+        r"\berror handl\b", r"\bfailure\b", r"\bfails?\b",
+        r"\bdeadlock\b", r"\bcircular\b", r"\bstale\b", r"\borphan\b",
+        r"\bmissing\b", r"\bbroken\b", r"\bcorrupt\b", r"\binconsisten\b",
+        r"\bwhat if\b", r"\bwhat happens\b", r"\bwhen .{1,40} (fails?|breaks?|crashes?)\b",
+        r"\bfalse positive\b", r"\bfalse negative\b",
+        r"\bbackward.?compat\b", r"\bdeprecated?\b", r"\bmigrat\b",
+        r"\bmonorepo\b", r"\blarge.?scale\b", r"\blegacy\b",
     ]
     lower = text.lower()
     return sum(1 for p in patterns if re.search(p, lower))
@@ -115,8 +142,9 @@ def has_code_example(text: str) -> bool:
 
 
 def has_numbered_workflow(text: str) -> bool:
-    """Return True if there are at least 3 numbered steps (e.g., '1. ' '2. ' '3. ')."""
-    steps = re.findall(r"^\s*\d+\.", text, re.MULTILINE)
+    """Return True if there are at least 3 numbered steps (e.g., '1. ', '### 1. ')."""
+    # Match both numbered list items and numbered headings (### 1. Step Name)
+    steps = re.findall(r"^\s*(?:#{1,4}\s+)?\d+\.", text, re.MULTILINE)
     return len(steps) >= 3
 
 

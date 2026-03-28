@@ -1,7 +1,7 @@
 {
   "version": "1.0",
-  "generated_at": "2026-03-28T10:43:30+00:00",
-  "skill_count": 54,
+  "generated_at": "2026-03-28T18:44:36+00:00",
+  "skill_count": 55,
   "skills": [
     {
       "name": "accessplus",
@@ -195,6 +195,31 @@
       "triggers": [
         "create",
         "changelog"
+      ]
+    },
+    {
+      "name": "codemap",
+      "description": "Generates and maintains a structured codemap file that gives AI agents instant codebase context without costly exploration. Produces a navigable index of entry points, modules, key abstractions, dependency flow, and file roles. Use when starting a new session, after major refactors, at PR boundaries, or when an agent is burning context on repeated file discovery.",
+      "categories": [
+        "database",
+        "git",
+        "ai/ml"
+      ],
+      "triggers": [
+        "starting",
+        "new",
+        "session",
+        "after",
+        "major",
+        "refactors",
+        "boundaries",
+        "when",
+        "agent",
+        "burning",
+        "context",
+        "repeated",
+        "file",
+        "discovery"
       ]
     },
     {

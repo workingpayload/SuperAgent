@@ -58,7 +58,33 @@ Never attempt a "big bang" rewrite. Each strangler step should be independently 
 Each refactoring step must be:
 - **A single logical change** (rename, extract, move — not all three at once).
 - **Behavior-preserving**: run the test suite after each step and commit only if green.
-- **Independently committable**: each commit should have a descriptive message referencing the pattern used, e.g., `refactor: extract UserValidator from UserService (Extract Class)`.
+- **Independently committable**: each commit should have a descriptive message referencing the pattern used.
+
+Example — Extract Method:
+
+```python
+# Before: long method with inline validation
+def create_order(user_id, items, coupon_code):
+    if not items or len(items) > 100:
+        raise ValueError("Invalid item count")
+    if coupon_code and not re.match(r'^[A-Z0-9]{6,10}$', coupon_code):
+        raise ValueError("Invalid coupon format")
+    # ... 40 more lines of order logic
+
+# After: extracted validation into focused methods
+def _validate_items(items):
+    if not items or len(items) > 100:
+        raise ValueError("Invalid item count")
+
+def _validate_coupon(coupon_code):
+    if coupon_code and not re.match(r'^[A-Z0-9]{6,10}$', coupon_code):
+        raise ValueError("Invalid coupon format")
+
+def create_order(user_id, items, coupon_code):
+    _validate_items(items)
+    _validate_coupon(coupon_code)
+    # ... order logic, now shorter and focused
+```
 
 Avoid mixing refactoring commits with feature additions or bug fixes.
 
