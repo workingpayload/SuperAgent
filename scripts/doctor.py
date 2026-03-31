@@ -33,7 +33,7 @@ META_FILENAME = ".skills-meta.json"
 
 INSTALL_DIRS = {
     "claude": Path.home() / ".claude" / "commands",
-    "gemini": Path.home() / ".gemini" / "commands",
+    "gemini": Path.home() / ".gemini" / "skills",
     "antigravity": Path.home() / ".gemini" / "antigravity" / "skills",
 }
 

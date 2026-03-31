@@ -12,7 +12,7 @@ const HOME = os.homedir();
 
 const TARGETS = {
   claude: path.join(HOME, ".claude", "commands"),
-  gemini: path.join(HOME, ".gemini", "commands"),
+  gemini: path.join(HOME, ".gemini", "skills"),
   antigravity: path.join(HOME, ".gemini", "antigravity", "skills"),
 };
 
@@ -127,7 +127,8 @@ function cmdInstall(args) {
     const slug = slugify(skill.name);
     const dest = path.join(installDir, `${slug}.md`);
 
-    const existsAlready = target === "antigravity"
+    const usesDirFormat = target === "gemini" || target === "antigravity";
+    const existsAlready = usesDirFormat
       ? fs.existsSync(path.join(installDir, slug, "SKILL.md"))
       : fs.existsSync(dest);
     if (existsAlready && !force) {
@@ -147,8 +148,8 @@ function cmdInstall(args) {
       }
     }
 
-    if (target === "antigravity") {
-      // Antigravity uses directory-based skills: each skill is a directory with SKILL.md
+    if (usesDirFormat) {
+      // Gemini and Antigravity use directory-based skills: each skill is a directory with SKILL.md
       const skillDir = path.join(installDir, slug);
       const destFile = path.join(skillDir, "SKILL.md");
 
@@ -216,12 +217,14 @@ function cmdInstall(args) {
     if (target === "claude") {
       console.log(`  In Claude Code, type /<skill-name> to invoke a skill.`);
       console.log(`  Examples: /codesage, /testcrafter, /dockmaster, /python-master`);
+    } else if (target === "gemini") {
+      console.log(`  Skills are now available in Gemini CLI.`);
+      console.log(`  Gemini will automatically activate skills when your task matches a skill description.`);
+      console.log(`  Installed to: ${installDir}`);
     } else if (target === "antigravity") {
       console.log(`  Skills are now available in Google Antigravity.`);
       console.log(`  The agent will automatically match skills to your tasks via semantic triggering.`);
       console.log(`  Installed to: ${installDir}`);
-    } else {
-      console.log(`  Skills are now available in your Gemini context.`);
     }
   }
 }

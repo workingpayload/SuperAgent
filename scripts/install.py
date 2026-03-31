@@ -33,13 +33,16 @@ META_FILE = ".skills-meta.json"
 
 INSTALL_DIRS = {
     "claude": Path.home() / ".claude" / "commands",
-    "gemini": Path.home() / ".gemini" / "commands",
+    "gemini": Path.home() / ".gemini" / "skills",
     "antigravity": Path.home() / ".gemini" / "antigravity" / "skills",
 }
 
+# Targets that use directory-based skill format (skill-name/SKILL.md)
+DIR_FORMAT_TARGETS = {"gemini", "antigravity"}
+
 POST_INSTALL_INSTRUCTIONS = {
     "claude": "Use skills by typing /skill-name in Claude Code",
-    "gemini": "Skills are available in your Gemini context",
+    "gemini": "Gemini CLI will automatically activate skills matching your task",
     "antigravity": "Skills are available in Google Antigravity via semantic triggering",
 }
 
@@ -236,9 +239,10 @@ def install_skills(
                 continue
 
         # Skip if already installed and not forcing
+        uses_dir_format = target in DIR_FORMAT_TARGETS
         exists_already = (
             (install_dir / skill_name / "SKILL.md").exists()
-            if target == "antigravity"
+            if uses_dir_format
             else dest.exists()
         )
         if exists_already and not force:
@@ -246,8 +250,8 @@ def install_skills(
             skipped_count += 1
             continue
 
-        if target == "antigravity":
-            # Antigravity: directory-based skills with SKILL.md
+        if uses_dir_format:
+            # Gemini and Antigravity: directory-based skills with SKILL.md
             skill_dir = install_dir / skill_name
             dest_file = skill_dir / "SKILL.md"
             action = "Would install" if dry_run else "Installing"
@@ -306,12 +310,9 @@ def install_skills(
         if target == "claude":
             print(f"  {instruction}")
             print(f"  Example: /codesage, /uismith, /bugHunter-pro")
-        elif target == "antigravity":
+        elif target in DIR_FORMAT_TARGETS:
             print(f"  {instruction}")
-            print(f"  The agent will automatically match skills to your tasks.")
             print(f"  Skills installed as directories with SKILL.md files.")
-        else:
-            print(f"  {instruction}")
         print(f"\nInstall directory: {install_dir}")
 
 

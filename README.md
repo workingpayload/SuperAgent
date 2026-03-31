@@ -141,15 +141,15 @@ npx @workingpayload/agent-skills route "design database schema"
 
 ```
 ~/.claude/commands/                # Claude Code slash commands
-~/.gemini/commands/                # Gemini skills
+~/.gemini/skills/                  # Gemini CLI skills (directory-based)
 ~/.gemini/antigravity/skills/      # Google Antigravity skills (directory-based)
 ```
 
 Each skill becomes a slash command (Claude/Gemini) or a directory-based skill (Antigravity):
 
 ```
-~/.claude/commands/codesage.md                → /codesage
-~/.claude/commands/testcrafter.md             → /testcrafter
+~/.claude/commands/codesage.md                  → /codesage (Claude Code)
+~/.gemini/skills/codesage/SKILL.md              → auto-activated by Gemini CLI
 ~/.gemini/antigravity/skills/codesage/SKILL.md  → auto-triggered by Antigravity agent
 ```
 
