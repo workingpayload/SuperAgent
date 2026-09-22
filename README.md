@@ -37,8 +37,9 @@ npx @workingpayload/agent-skills install
 npx @workingpayload/agent-skills install
 ```
 
-By default, this installs every skill for all supported AI CLIs. To install for
-only selected tools:
+By default, each skill is stored once in the cross-agent skill store, then
+linked into every supported AI CLI. This avoids maintaining duplicate copies.
+To expose skills to only selected tools:
 
 ```bash
 npx @workingpayload/agent-skills install -t copilot,codex
@@ -144,27 +145,26 @@ npx @workingpayload/agent-skills route "design database schema"
 
 ---
 
-## 🗂️ Where Skills Are Installed
+## 🗂️ Shared Skill Storage
 
 ```
-~/.agents/skills/                  # Cross-agent Agent Skills location
-~/.claude/skills/                  # Claude Code skills
-~/.copilot/skills/                 # GitHub Copilot CLI skills
-~/.codex/skills/                   # OpenAI Codex CLI skills
-~/.gemini/skills/                  # Gemini CLI skills (directory-based)
-~/.gemini/antigravity/skills/      # Google Antigravity skills (directory-based)
+~/.agents/skills/                  # Canonical skill store
 ```
 
-Each target receives the portable directory-based Agent Skills format:
+Each supported CLI receives a directory link to the canonical skill:
 
 ```
-~/.claude/skills/codesage/SKILL.md              → /codesage (Claude Code)
-~/.copilot/skills/codesage/SKILL.md             → auto-activated by Copilot CLI
-~/.codex/skills/codesage/SKILL.md               → auto-activated by Codex CLI
-~/.agents/skills/codesage/SKILL.md              → available to compatible agents
-~/.gemini/skills/codesage/SKILL.md              → auto-activated by Gemini CLI
-~/.gemini/antigravity/skills/codesage/SKILL.md  → auto-triggered by Antigravity agent
+~/.agents/skills/codesage/                       # Files stored here once
+~/.claude/skills/codesage                        # Link to canonical directory
+~/.copilot/skills/codesage                       # Link to canonical directory
+~/.codex/skills/codesage                         # Link to canonical directory
+~/.gemini/skills/codesage                        # Link to canonical directory
+~/.gemini/antigravity/skills/codesage            # Link to canonical directory
 ```
+
+On Windows, links are directory junctions. On macOS and Linux, they are
+symbolic links. Use `--force` once to replace older copied installations with
+links.
 
 ---
 

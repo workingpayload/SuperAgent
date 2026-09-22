@@ -37,6 +37,7 @@ const TARGETS = {
   },
 };
 const TARGET_NAMES = Object.keys(TARGETS);
+const CANONICAL_TARGET = "agents";
 
 // ── Helpers ────────────────────────────────────────────────────────
 function hasPython() {
@@ -120,17 +121,25 @@ function skillPath(installDir, slug) {
   return path.join(installDir, slug, "SKILL.md");
 }
 
-function installToTarget(target, skills, options) {
-  const { installDir, label } = TARGETS[target];
+function pathEntryExists(entryPath) {
+  try {
+    fs.lstatSync(entryPath);
+    return true;
+  } catch (err) {
+    if (err.code === "ENOENT") return false;
+    throw err;
+  }
+}
+
+function installCanonicalSkills(skills, options) {
+  const { installDir } = TARGETS[CANONICAL_TARGET];
   const { dryRun, force, validate } = options;
 
   if (!dryRun) {
     fs.mkdirSync(installDir, { recursive: true });
   }
 
-  console.log(`\nTarget : ${label} (${target})`);
-  console.log(`Install: ${installDir}`);
-  console.log(`Skills : ${skills.length}`);
+  console.log("\nCanonical skill store");
 
   let installed = 0, skipped = 0, failed = 0;
   const meta = loadMeta(installDir);
@@ -156,9 +165,7 @@ function installToTarget(target, skills, options) {
     }
 
     if (dryRun) {
-      console.log(`  Would install ${slug}`);
-      console.log(`    src : ${skill.fullPath}`);
-      console.log(`    dest: ${destFile}`);
+      console.log(`  Would store ${slug}`);
       installed++;
       continue;
     }
@@ -199,6 +206,72 @@ function installToTarget(target, skills, options) {
   return { installed, skipped, failed };
 }
 
+function linkSkillsToTarget(target, skills, options) {
+  const { installDir, label } = TARGETS[target];
+  const canonicalDir = TARGETS[CANONICAL_TARGET].installDir;
+  const { dryRun, force } = options;
+
+  if (!dryRun) {
+    fs.mkdirSync(installDir, { recursive: true });
+  }
+
+  console.log(`\n${label}`);
+  let linked = 0, skipped = 0, failed = 0;
+  const meta = loadMeta(installDir);
+
+  for (const skill of skills) {
+    const slug = slugify(skill.name);
+    const canonicalSkillDir = path.join(canonicalDir, slug);
+    const linkPath = path.join(installDir, slug);
+
+    if (pathEntryExists(linkPath) && !force) {
+      console.log(`  SKIP  ${slug} (already exists, use --force to replace with a link)`);
+      skipped++;
+      continue;
+    }
+
+    if (dryRun) {
+      console.log(`  Would link ${slug}`);
+      linked++;
+      continue;
+    }
+
+    try {
+      if (!fs.existsSync(skillPath(canonicalDir, slug))) {
+        throw new Error("canonical skill is missing");
+      }
+      if (pathEntryExists(linkPath)) {
+        fs.rmSync(linkPath, { recursive: true, force: true });
+      }
+      fs.symlinkSync(
+        canonicalSkillDir,
+        linkPath,
+        process.platform === "win32" ? "junction" : "dir",
+      );
+      meta[slug] = {
+        name: slug,
+        source: skill.fullPath,
+        filename: path.join(slug, "SKILL.md"),
+        linked_from: canonicalSkillDir,
+        installed_at: new Date().toISOString(),
+        directory: skill.dir,
+      };
+      linked++;
+      console.log(`  OK    ${slug}`);
+    } catch (err) {
+      console.log(`  FAIL  ${slug} — ${err.message}`);
+      failed++;
+    }
+  }
+
+  if (!dryRun) {
+    saveMeta(installDir, meta);
+  }
+
+  console.log(`${linked} linked, ${skipped} skipped, ${failed} failed.`);
+  return { linked, skipped, failed };
+}
+
 // ── Commands ───────────────────────────────────────────────────────
 
 function cmdInstall(args) {
@@ -214,26 +287,32 @@ function cmdInstall(args) {
     skills = skills.filter(s => wanted.has(s.name.toLowerCase()) || wanted.has(slugify(s.name)));
   }
 
-  console.log(`Installing ${skills.length} skill(s) to ${targets.length} target(s): ${targets.join(", ")}`);
+  const nativeTargets = targets.filter(target => target !== CANONICAL_TARGET);
+  console.log(`Preparing ${skills.length} skill(s) for: ${targets.join(", ")}`);
   if (dryRun) console.log("[DRY RUN — no files will be written]");
 
-  const totals = targets.reduce((summary, target) => {
-    const result = installToTarget(target, skills, {
-      dryRun,
-      force,
-      validate: flags.validate || false,
-    });
-    summary.installed += result.installed;
+  const stored = installCanonicalSkills(skills, {
+    dryRun,
+    force,
+    validate: flags.validate || false,
+  });
+  const totals = nativeTargets.reduce((summary, target) => {
+    const result = linkSkillsToTarget(target, skills, { dryRun, force });
+    summary.linked += result.linked;
     summary.skipped += result.skipped;
     summary.failed += result.failed;
     return summary;
-  }, { installed: 0, skipped: 0, failed: 0 });
+  }, { linked: 0, skipped: 0, failed: 0 });
 
-  console.log(`\nTotal: ${totals.installed} installed, ${totals.skipped} skipped, ${totals.failed} failed.`);
-  if (!dryRun && totals.installed > 0) {
+  const failed = stored.failed + totals.failed;
+  console.log(
+    `\nTotal: ${stored.installed} stored, ${totals.linked} linked, ` +
+    `${stored.skipped + totals.skipped} skipped, ${failed} failed.`,
+  );
+  if (!dryRun && (stored.installed > 0 || totals.linked > 0)) {
     console.log("\nSkills are available to supported agents automatically and can be invoked by name.");
   }
-  if (totals.failed > 0) {
+  if (failed > 0) {
     process.exitCode = 1;
   }
 }
@@ -241,6 +320,10 @@ function cmdInstall(args) {
 function cmdUninstall(args) {
   const flags = parseFlags(args, { target: "t" });
   const targets = resolveTargets(flags.target);
+  const removalOrder = [
+    ...targets.filter(target => target !== CANONICAL_TARGET),
+    ...targets.filter(target => target === CANONICAL_TARGET),
+  ];
   const names = flags._.filter(n => n !== "uninstall");
 
   if (names.length === 0) {
@@ -249,14 +332,14 @@ function cmdUninstall(args) {
   }
 
   let removed = 0;
-  for (const target of targets) {
+  for (const target of removalOrder) {
     const installDir = TARGETS[target].installDir;
     const meta = loadMeta(installDir);
     console.log(`\nTarget: ${TARGETS[target].label} (${target})`);
     for (const name of names) {
       const slug = slugify(name);
       const skillDir = path.join(installDir, slug);
-      if (fs.existsSync(skillDir)) {
+      if (pathEntryExists(skillDir)) {
         fs.rmSync(skillDir, { recursive: true, force: true });
         delete meta[slug];
         console.log(`  Removed ${slug}`);
@@ -276,7 +359,7 @@ function cmdList(args) {
   const targets = resolveTargets(flags.target);
   for (const target of targets) {
     const installDir = TARGETS[target].installDir;
-    console.log(`\nInstalled skills (${target}) — ${installDir}`);
+    console.log(`\nInstalled skills (${target})`);
     if (!fs.existsSync(installDir)) {
       console.log("  None (directory does not exist).");
       continue;
@@ -327,7 +410,7 @@ Usage:
   agent-skills <command> [options]
 
 Commands:
-  install              Install skills to all supported AI CLIs
+  install              Store skills once and link them into supported AI CLIs
     -t, --target       Target(s): "all", "agents", "claude", "copilot", "codex",
                        "gemini", or "antigravity" (comma-separated; default: all)
     -s, --skills       Comma-separated skill names (default: all)
@@ -361,8 +444,8 @@ Commands:
   build-index          Regenerate skills.json and skills-routing.json
 
 Examples:
-  npx agent-skills install                      # Install to every supported AI CLI
-  npx agent-skills install -t copilot,codex     # Install to selected AI CLIs
+  npx agent-skills install                      # Store once and link every supported CLI
+  npx agent-skills install -t copilot,codex     # Link only selected AI CLIs
   npx agent-skills install -t gemini -s CodeSage,TestCrafter
   npx agent-skills install -t antigravity       # Install all to Google Antigravity
   npx agent-skills route "review my Python code"

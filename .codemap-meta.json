@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "generated_at": "2026-09-22T14:29:41Z",
+  "checkpoint": "post-refactor central skill storage",
+  "file_count": 80,
+  "module_count": 63,
+  "entry_point_count": 8,
+  "skill_count": 55,
+  "git_sha": "7f1882a227859640051f76803f2c9f727b4a2078",
+  "hot_files_window_days": 30
+}

@@ -3,7 +3,7 @@
 install.py - Install Agent Skills to supported AI CLI skill directories.
 
 Usage:
-    python scripts/install.py                          # install all skills to every target
+    python scripts/install.py                          # store once and link every target
     python scripts/install.py --target claude          # install to Claude
     python scripts/install.py --target gemini          # install to Gemini
     python scripts/install.py --skills CodeSage,UISmith  # install specific skills
@@ -40,17 +40,7 @@ INSTALL_DIRS = {
     "antigravity": Path.home() / ".gemini" / "antigravity" / "skills",
 }
 
-# Targets that use directory-based skill format (skill-name/SKILL.md)
-DIR_FORMAT_TARGETS = set(INSTALL_DIRS)
-
-POST_INSTALL_INSTRUCTIONS = {
-    "agents": "Skills are available to CLIs that support the cross-agent ~/.agents/skills directory",
-    "claude": "Use skills by typing /skill-name in Claude Code",
-    "copilot": "GitHub Copilot CLI will automatically activate skills matching your task",
-    "codex": "OpenAI Codex CLI will automatically activate skills matching your task",
-    "gemini": "Gemini CLI will automatically activate skills matching your task",
-    "antigravity": "Skills are available in Google Antigravity via semantic triggering",
-}
+CANONICAL_TARGET = "agents"
 
 # ---------------------------------------------------------------------------
 # Repo helpers
@@ -162,10 +152,6 @@ def validate_skill(skill_file: Path) -> tuple[bool, str]:
 
 
 # ---------------------------------------------------------------------------
-# Auto-detect target
-# ---------------------------------------------------------------------------
-
-# ---------------------------------------------------------------------------
 # Core operations
 # ---------------------------------------------------------------------------
 
@@ -175,7 +161,7 @@ def list_installed(install_dir: Path) -> None:
         print("No skills installed.")
         return
 
-    print(f"Installed skills in {install_dir}:\n")
+    print("Installed skills:\n")
     header = f"{'Skill':<30} {'Version':<20} {'Installed At'}"
     print(header)
     print("-" * len(header))
@@ -185,16 +171,27 @@ def list_installed(install_dir: Path) -> None:
         print(f"{name:<30} {version:<20} {installed_at}")
 
 
+def remove_directory_entry(path: Path) -> None:
+    """Remove a real directory or a directory link without traversing links."""
+    is_junction = getattr(path, "is_junction", lambda: False)()
+    if is_junction:
+        os.rmdir(path)
+    elif path.is_symlink() or not path.is_dir():
+        path.unlink()
+    else:
+        shutil.rmtree(path)
+
+
 def uninstall_skills(names: list[str], install_dir: Path, dry_run: bool) -> None:
     meta = load_meta(install_dir)
     removed, missing = 0, 0
 
     for name in names:
         dest = install_dir / name
-        if dest.exists():
-            print(f"  {'[dry-run] ' if dry_run else ''}Removing {dest}")
+        if os.path.lexists(dest):
+            print(f"  {'[dry-run] ' if dry_run else ''}Removing {name}")
             if not dry_run:
-                shutil.rmtree(dest)
+                remove_directory_entry(dest)
             removed += 1
         else:
             print(f"  Skill not installed: {name}")
@@ -212,11 +209,10 @@ def uninstall_skills(names: list[str], install_dir: Path, dry_run: bool) -> None
 def install_skills(
     skill_map: dict[str, Path],
     install_dir: Path,
-    target: str,
     force: bool,
     dry_run: bool,
     do_validate: bool,
-) -> None:
+) -> dict[str, int]:
     if not dry_run:
         install_dir.mkdir(parents=True, exist_ok=True)
     meta = load_meta(install_dir)
@@ -226,7 +222,8 @@ def install_skills(
     failed_count = 0
 
     for skill_name, skill_file in sorted(skill_map.items()):
-        dest = install_dir / f"{skill_name}.md"
+        skill_dir = install_dir / skill_name
+        dest_file = skill_dir / "SKILL.md"
 
         # Validation gate
         if do_validate:
@@ -237,59 +234,32 @@ def install_skills(
                 continue
 
         # Skip if already installed and not forcing
-        uses_dir_format = target in DIR_FORMAT_TARGETS
-        exists_already = (
-            (install_dir / skill_name / "SKILL.md").exists()
-            if uses_dir_format
-            else dest.exists()
-        )
-        if exists_already and not force:
+        if dest_file.exists() and not force:
             print(f"  SKIP  {skill_name} (already installed; use --force to overwrite)")
             skipped_count += 1
             continue
 
-        if uses_dir_format:
-            # Gemini and Antigravity: directory-based skills with SKILL.md
-            skill_dir = install_dir / skill_name
-            dest_file = skill_dir / "SKILL.md"
-            action = "Would install" if dry_run else "Installing"
-            print(f"  {action}  {skill_name}")
-            print(f"         src : {skill_file}")
-            print(f"         dest: {dest_file}")
+        action = "Would store" if dry_run else "Storing"
+        print(f"  {action}  {skill_name}")
 
-            if not dry_run:
-                skill_dir.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(str(skill_file), str(dest_file))
-                # Copy optional asset directories (scripts/, references/, assets/)
-                src_dir = skill_file.parent
-                for subdir_name in ("scripts", "references", "assets"):
-                    src_sub = src_dir / subdir_name
-                    if src_sub.is_dir():
-                        dest_sub = skill_dir / subdir_name
-                        if dest_sub.exists():
-                            shutil.rmtree(str(dest_sub))
-                        shutil.copytree(str(src_sub), str(dest_sub))
-                meta[skill_name] = {
-                    "name": skill_name,
-                    "version": git_hash(skill_file),
-                    "installed_at": datetime.now(timezone.utc).isoformat(),
-                    "source_path": str(skill_file),
-                    "filename": str(Path(skill_name) / "SKILL.md"),
-                }
-        else:
-            action = "Would install" if dry_run else "Installing"
-            print(f"  {action}  {skill_name}")
-            print(f"         src : {skill_file}")
-            print(f"         dest: {dest}")
-
-            if not dry_run:
-                shutil.copy2(str(skill_file), str(dest))
-                meta[skill_name] = {
-                    "name": skill_name,
-                    "version": git_hash(skill_file),
-                    "installed_at": datetime.now(timezone.utc).isoformat(),
-                    "source_path": str(skill_file),
-                }
+        if not dry_run:
+            skill_dir.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(str(skill_file), str(dest_file))
+            src_dir = skill_file.parent
+            for subdir_name in ("scripts", "references", "assets"):
+                src_sub = src_dir / subdir_name
+                if src_sub.is_dir():
+                    dest_sub = skill_dir / subdir_name
+                    if dest_sub.exists():
+                        shutil.rmtree(str(dest_sub))
+                    shutil.copytree(str(src_sub), str(dest_sub))
+            meta[skill_name] = {
+                "name": skill_name,
+                "version": git_hash(skill_file),
+                "installed_at": datetime.now(timezone.utc).isoformat(),
+                "source_path": str(skill_file),
+                "filename": str(Path(skill_name) / "SKILL.md"),
+            }
 
         installed_count += 1
 
@@ -303,16 +273,77 @@ def install_skills(
         f"{failed_count} failed."
     )
 
-    if not dry_run and installed_count > 0:
-        instruction = POST_INSTALL_INSTRUCTIONS.get(target, "")
-        print(f"\nHow to use your skills ({target}):")
-        if target == "claude":
-            print(f"  {instruction}")
-            print(f"  Example: /codesage, /uismith, /bugHunter-pro")
-        elif target in DIR_FORMAT_TARGETS:
-            print(f"  {instruction}")
-            print(f"  Skills installed as directories with SKILL.md files.")
-        print(f"\nInstall directory: {install_dir}")
+    return {
+        "stored": installed_count,
+        "skipped": skipped_count,
+        "failed": failed_count,
+    }
+
+
+def create_directory_link(source: Path, link: Path) -> None:
+    """Create a directory link, using a junction on Windows."""
+    if sys.platform == "win32":
+        command = os.environ.get("COMSPEC", "cmd.exe")
+        result = subprocess.run(
+            [command, "/c", "mklink", "/J", str(link), str(source)],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            raise OSError((result.stderr or result.stdout).strip())
+    else:
+        link.symlink_to(source, target_is_directory=True)
+
+
+def link_skills(
+    skill_map: dict[str, Path],
+    target: str,
+    force: bool,
+    dry_run: bool,
+) -> dict[str, int]:
+    install_dir = INSTALL_DIRS[target]
+    canonical_dir = INSTALL_DIRS[CANONICAL_TARGET]
+    if not dry_run:
+        install_dir.mkdir(parents=True, exist_ok=True)
+    meta = load_meta(install_dir)
+    linked = skipped = failed = 0
+
+    print(f"\nTarget: {target}")
+    for skill_name, skill_file in sorted(skill_map.items()):
+        source = canonical_dir / skill_name
+        link = install_dir / skill_name
+        if os.path.lexists(link) and not force:
+            print(f"  SKIP  {skill_name} (already exists; use --force to replace with a link)")
+            skipped += 1
+            continue
+        if dry_run:
+            print(f"  Would link {skill_name}")
+            linked += 1
+            continue
+        try:
+            if not (source / "SKILL.md").is_file():
+                raise FileNotFoundError("canonical skill is missing")
+            if os.path.lexists(link):
+                remove_directory_entry(link)
+            create_directory_link(source, link)
+            meta[skill_name] = {
+                "name": skill_name,
+                "version": git_hash(skill_file),
+                "installed_at": datetime.now(timezone.utc).isoformat(),
+                "source_path": str(skill_file),
+                "filename": str(Path(skill_name) / "SKILL.md"),
+                "linked_from": str(source),
+            }
+            print(f"  OK    {skill_name}")
+            linked += 1
+        except OSError as exc:
+            print(f"  FAIL  {skill_name}: {exc}")
+            failed += 1
+
+    if not dry_run:
+        save_meta(install_dir, meta)
+    print(f"Summary: {linked} linked, {skipped} skipped, {failed} failed.")
+    return {"linked": linked, "skipped": skipped, "failed": failed}
 
 
 # ---------------------------------------------------------------------------
@@ -382,9 +413,12 @@ def main(argv: list[str] | None = None) -> int:
     # --uninstall
     if args.uninstall:
         names = [n.strip().lower().replace(" ", "-") for n in args.uninstall.split(",") if n.strip()]
-        for target in targets:
+        removal_order = [target for target in targets if target != CANONICAL_TARGET]
+        if CANONICAL_TARGET in targets:
+            removal_order.append(CANONICAL_TARGET)
+        for target in removal_order:
             install_dir = INSTALL_DIRS[target]
-            print(f"\nUninstalling {len(names)} skill(s) from {target} ({install_dir}):\n")
+            print(f"\nUninstalling {len(names)} skill(s) from {target}:\n")
             uninstall_skills(names, install_dir, dry_run=args.dry_run)
         return 0
 
@@ -418,20 +452,34 @@ def main(argv: list[str] | None = None) -> int:
         print("[DRY RUN — no files will be written]\n")
     print()
 
+    print("\nCanonical skill store")
+    stored = install_skills(
+        skill_map=skill_map,
+        install_dir=INSTALL_DIRS[CANONICAL_TARGET],
+        force=args.force,
+        dry_run=args.dry_run,
+        do_validate=args.validate,
+    )
+    totals = {"linked": 0, "skipped": stored["skipped"], "failed": stored["failed"]}
     for target in targets:
-        install_dir = INSTALL_DIRS[target]
-        print(f"\nTarget : {target}")
-        print(f"Install: {install_dir}")
-        install_skills(
+        if target == CANONICAL_TARGET:
+            continue
+        result = link_skills(
             skill_map=skill_map,
-            install_dir=install_dir,
             target=target,
             force=args.force,
             dry_run=args.dry_run,
-            do_validate=args.validate,
         )
+        totals["linked"] += result["linked"]
+        totals["skipped"] += result["skipped"]
+        totals["failed"] += result["failed"]
 
-    return 0
+    print(
+        f"\nTotal: {stored['stored']} stored, {totals['linked']} linked, "
+        f"{totals['skipped']} skipped, {totals['failed']} failed."
+    )
+
+    return 1 if totals["failed"] else 0
 
 
 if __name__ == "__main__":
