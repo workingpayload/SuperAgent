@@ -1,7 +1,7 @@
 {
   "name": "@workingpayload/agent-skills",
   "version": "2.0.1",
-  "description": "Install and run AI-powered developer skills across Claude, Gemini, and Google Antigravity",
+  "description": "Install portable AI-powered developer skills across Copilot, Claude, Codex, Gemini, and other agents",
   "bin": {
     "agent-skills": "./bin/cli.js"
   },
@@ -14,6 +14,8 @@
   "keywords": [
     "ai",
     "claude",
+    "copilot",
+    "codex",
     "gemini",
     "antigravity",
     "skills",

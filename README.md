@@ -1,6 +1,6 @@
 # 🦸 Super Agent
 
-> Install and run AI-powered developer skills across Claude, Gemini, and Google Antigravity.
+> Install and run portable AI-powered developer skills across GitHub Copilot, Claude, Codex, Gemini, Google Antigravity, and other Agent Skills-compatible tools.
 
 ⚡ Turn prompts into reusable, installable skills
 ⚡ Works from CLI in seconds
@@ -19,7 +19,7 @@ npx @workingpayload/agent-skills install
 ## ✨ Features
 
 * 🧠 55 expert-level developer skills with named tools, concrete steps, and edge case coverage
-* 🤖 Multi-LLM support (Claude, Gemini, Google Antigravity)
+* 🤖 Multi-agent support (Copilot, Claude, Codex, Gemini, Google Antigravity, and the open Agent Skills standard)
 * 📦 CLI-first workflow with install, route, doctor, and score commands
 * 🔄 Versioning & health checks for installed skills
 * 🎯 Selective install — pick only the skills you need
@@ -35,6 +35,13 @@ npx @workingpayload/agent-skills install
 
 ```bash
 npx @workingpayload/agent-skills install
+```
+
+By default, this installs every skill for all supported AI CLIs. To install for
+only selected tools:
+
+```bash
+npx @workingpayload/agent-skills install -t copilot,codex
 ```
 
 ### Or install globally
@@ -110,7 +117,7 @@ npx @workingpayload/agent-skills route "design database schema"
 
 | Command | Description |
 | --- | --- |
-| `install` | Install skills to Claude or Gemini |
+| `install` | Install skills to all supported AI CLIs, or selected targets |
 | `uninstall <names>` | Remove installed skills |
 | `list` | List installed skills with timestamps |
 | `route "<prompt>"` | Find the best skill for a task |
@@ -126,7 +133,7 @@ npx @workingpayload/agent-skills route "design database schema"
 
 | Flag | Description |
 | --- | --- |
-| `-t, --target` | Target platform: `claude`, `gemini`, or `antigravity` |
+| `-t, --target` | Target platform(s): `all`, `agents`, `claude`, `copilot`, `codex`, `gemini`, or `antigravity`; comma-separated values are supported |
 | `-s, --skills` | Comma-separated skill names to install |
 | `--force` | Overwrite existing skills |
 | `--dry-run` | Preview without writing files |
@@ -140,15 +147,21 @@ npx @workingpayload/agent-skills route "design database schema"
 ## 🗂️ Where Skills Are Installed
 
 ```
-~/.claude/commands/                # Claude Code slash commands
+~/.agents/skills/                  # Cross-agent Agent Skills location
+~/.claude/skills/                  # Claude Code skills
+~/.copilot/skills/                 # GitHub Copilot CLI skills
+~/.codex/skills/                   # OpenAI Codex CLI skills
 ~/.gemini/skills/                  # Gemini CLI skills (directory-based)
 ~/.gemini/antigravity/skills/      # Google Antigravity skills (directory-based)
 ```
 
-Each skill becomes a slash command (Claude/Gemini) or a directory-based skill (Antigravity):
+Each target receives the portable directory-based Agent Skills format:
 
 ```
-~/.claude/commands/codesage.md                  → /codesage (Claude Code)
+~/.claude/skills/codesage/SKILL.md              → /codesage (Claude Code)
+~/.copilot/skills/codesage/SKILL.md             → auto-activated by Copilot CLI
+~/.codex/skills/codesage/SKILL.md               → auto-activated by Codex CLI
+~/.agents/skills/codesage/SKILL.md              → available to compatible agents
 ~/.gemini/skills/codesage/SKILL.md              → auto-activated by Gemini CLI
 ~/.gemini/antigravity/skills/codesage/SKILL.md  → auto-triggered by Antigravity agent
 ```
@@ -408,7 +421,7 @@ Prompt engineering is repetitive.
 Agent Skills turns prompts into:
 
 * reusable skills with named tools and concrete steps
-* installable CLI commands for Claude, Gemini, and Google Antigravity
+* installable skills for Copilot, Claude, Codex, Gemini, Google Antigravity, and compatible agents
 * quality-gated, version-tracked AI workflows
 
 ---

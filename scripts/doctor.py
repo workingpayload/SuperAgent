@@ -2,8 +2,8 @@
 """
 doctor.py - Health check for installed Agent Skills.
 
-Checks Claude (~/.claude/commands/) and/or Gemini (~/.gemini/commands/)
-install directories for integrity, staleness, orphans, and format issues.
+Checks supported AI CLI skill directories for integrity, staleness, orphans,
+and format issues.
 
 Usage:
     python scripts/doctor.py                   # check both targets
@@ -32,7 +32,10 @@ SKILL_FILENAMES = {"skill.md", "SKILL.md"}
 META_FILENAME = ".skills-meta.json"
 
 INSTALL_DIRS = {
-    "claude": Path.home() / ".claude" / "commands",
+    "agents": Path.home() / ".agents" / "skills",
+    "claude": Path.home() / ".claude" / "skills",
+    "copilot": Path.home() / ".copilot" / "skills",
+    "codex": Path.home() / ".codex" / "skills",
     "gemini": Path.home() / ".gemini" / "skills",
     "antigravity": Path.home() / ".gemini" / "antigravity" / "skills",
 }
@@ -122,6 +125,17 @@ def find_source_skill(repo_root: Path, skill_name: str) -> Path | None:
     return None
 
 
+def installed_skill_path(install_dir: Path, skill_name: str, info: dict) -> Path:
+    """Resolve current directory format and legacy single-file installs."""
+    filename = info.get("filename")
+    if filename:
+        return install_dir / filename
+    directory_skill = install_dir / skill_name / "SKILL.md"
+    if directory_skill.is_file():
+        return directory_skill
+    return install_dir / f"{skill_name}.md"
+
+
 # ---------------------------------------------------------------------------
 # Individual health checks
 # ---------------------------------------------------------------------------
@@ -193,8 +207,7 @@ def check_file_integrity(install_dir: Path, meta: dict) -> list[CheckResult]:
         return results
 
     for skill_name, info in skills.items():
-        filename = info.get("filename", f"{skill_name}.md")
-        skill_path = install_dir / filename
+        skill_path = installed_skill_path(install_dir, skill_name, info)
         if skill_path.is_file():
             results.append(
                 CheckResult(
@@ -224,8 +237,7 @@ def check_stale(install_dir: Path, meta: dict, repo_root: Path) -> list[CheckRes
         skills = {k: v for k, v in meta.items() if isinstance(v, dict)}
 
     for skill_name, info in skills.items():
-        filename = info.get("filename", f"{skill_name}.md")
-        skill_path = install_dir / filename
+        skill_path = installed_skill_path(install_dir, skill_name, info)
         if not skill_path.is_file():
             # Already flagged by file integrity check — skip
             continue
@@ -278,21 +290,16 @@ def check_orphans(install_dir: Path, meta: dict) -> list[CheckResult]:
     skills = meta.get("skills", None)
     if skills is None:
         skills = {k: v for k, v in meta.items() if isinstance(v, dict)}
-    tracked_filenames = {
-        info.get("filename", f"{name}.md") for name, info in skills.items()
-    }
-    # Also always ignore the meta file itself
-    tracked_filenames.add(META_FILENAME)
+    tracked_entries = {installed_skill_path(install_dir, name, info).relative_to(install_dir).parts[0]
+                       for name, info in skills.items()}
+    tracked_entries.add(META_FILENAME)
 
     try:
         entries = list(install_dir.iterdir())
     except OSError:
         return results
 
-    orphans = [
-        e for e in entries
-        if e.is_file() and e.name not in tracked_filenames
-    ]
+    orphans = [entry for entry in entries if entry.name not in tracked_entries]
 
     if not orphans:
         results.append(
@@ -323,8 +330,7 @@ def check_format(install_dir: Path, meta: dict) -> list[CheckResult]:
         skills = {k: v for k, v in meta.items() if isinstance(v, dict)}
 
     for skill_name, info in skills.items():
-        filename = info.get("filename", f"{skill_name}.md")
-        skill_path = install_dir / filename
+        skill_path = installed_skill_path(install_dir, skill_name, info)
         if not skill_path.is_file():
             continue
 
@@ -475,13 +481,13 @@ def main() -> int:
     )
     parser.add_argument(
         "--target", "-t",
-        choices=["claude", "gemini", "antigravity"],
+        choices=list(INSTALL_DIRS),
         default=None,
         help="Which install target to check (default: all).",
     )
     args = parser.parse_args()
 
-    targets = [args.target] if args.target else ["claude", "gemini", "antigravity"]
+    targets = [args.target] if args.target else list(INSTALL_DIRS)
 
     repo_root = Path(__file__).resolve().parent.parent
 

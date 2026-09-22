@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-install.py - Install Agent Skills to Claude or Gemini commands directories.
+install.py - Install Agent Skills to supported AI CLI skill directories.
 
 Usage:
-    python scripts/install.py                          # install all skills (auto-detect target)
+    python scripts/install.py                          # install all skills to every target
     python scripts/install.py --target claude          # install to Claude
     python scripts/install.py --target gemini          # install to Gemini
     python scripts/install.py --skills CodeSage,UISmith  # install specific skills
@@ -32,16 +32,22 @@ SKILL_FILENAMES = ("skill.md", "SKILL.md")
 META_FILE = ".skills-meta.json"
 
 INSTALL_DIRS = {
-    "claude": Path.home() / ".claude" / "commands",
+    "agents": Path.home() / ".agents" / "skills",
+    "claude": Path.home() / ".claude" / "skills",
+    "copilot": Path.home() / ".copilot" / "skills",
+    "codex": Path.home() / ".codex" / "skills",
     "gemini": Path.home() / ".gemini" / "skills",
     "antigravity": Path.home() / ".gemini" / "antigravity" / "skills",
 }
 
 # Targets that use directory-based skill format (skill-name/SKILL.md)
-DIR_FORMAT_TARGETS = {"gemini", "antigravity"}
+DIR_FORMAT_TARGETS = set(INSTALL_DIRS)
 
 POST_INSTALL_INSTRUCTIONS = {
+    "agents": "Skills are available to CLIs that support the cross-agent ~/.agents/skills directory",
     "claude": "Use skills by typing /skill-name in Claude Code",
+    "copilot": "GitHub Copilot CLI will automatically activate skills matching your task",
+    "codex": "OpenAI Codex CLI will automatically activate skills matching your task",
     "gemini": "Gemini CLI will automatically activate skills matching your task",
     "antigravity": "Skills are available in Google Antigravity via semantic triggering",
 }
@@ -159,15 +165,6 @@ def validate_skill(skill_file: Path) -> tuple[bool, str]:
 # Auto-detect target
 # ---------------------------------------------------------------------------
 
-def auto_detect_target() -> str | None:
-    """Return 'claude' or 'gemini' based on which install dirs already exist."""
-    for target, path in INSTALL_DIRS.items():
-        if path.exists():
-            return target
-    # Fall back to claude as the primary target
-    return "claude"
-
-
 # ---------------------------------------------------------------------------
 # Core operations
 # ---------------------------------------------------------------------------
@@ -193,11 +190,11 @@ def uninstall_skills(names: list[str], install_dir: Path, dry_run: bool) -> None
     removed, missing = 0, 0
 
     for name in names:
-        dest = install_dir / f"{name}.md"
+        dest = install_dir / name
         if dest.exists():
             print(f"  {'[dry-run] ' if dry_run else ''}Removing {dest}")
             if not dry_run:
-                dest.unlink()
+                shutil.rmtree(dest)
             removed += 1
         else:
             print(f"  Skill not installed: {name}")
@@ -220,7 +217,8 @@ def install_skills(
     dry_run: bool,
     do_validate: bool,
 ) -> None:
-    install_dir.mkdir(parents=True, exist_ok=True)
+    if not dry_run:
+        install_dir.mkdir(parents=True, exist_ok=True)
     meta = load_meta(install_dir)
 
     installed_count = 0
@@ -276,6 +274,7 @@ def install_skills(
                     "version": git_hash(skill_file),
                     "installed_at": datetime.now(timezone.utc).isoformat(),
                     "source_path": str(skill_file),
+                    "filename": str(Path(skill_name) / "SKILL.md"),
                 }
         else:
             action = "Would install" if dry_run else "Installing"
@@ -322,16 +321,16 @@ def install_skills(
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Install Agent Skills to Claude or Gemini commands directories.",
+        description="Install Agent Skills to supported AI CLI skill directories.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
 
     parser.add_argument(
         "--target", "-t",
-        choices=["claude", "gemini", "antigravity"],
-        default=None,
-        help="Target platform (default: auto-detect based on existing directories).",
+        choices=["all", *INSTALL_DIRS.keys()],
+        default="all",
+        help="Target platform (default: all supported AI CLIs).",
     )
     parser.add_argument(
         "--skills", "-s",
@@ -371,24 +370,22 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
 
-    # Resolve target platform
-    target = args.target or auto_detect_target()
-    install_dir = INSTALL_DIRS[target]
-
-    print(f"Target : {target}")
-    print(f"Install: {install_dir}")
-    print()
+    targets = list(INSTALL_DIRS) if args.target == "all" else [args.target]
 
     # --list-installed
     if args.list_installed:
-        list_installed(install_dir)
+        for target in targets:
+            print(f"\nTarget: {target}")
+            list_installed(INSTALL_DIRS[target])
         return 0
 
     # --uninstall
     if args.uninstall:
         names = [n.strip().lower().replace(" ", "-") for n in args.uninstall.split(",") if n.strip()]
-        print(f"Uninstalling {len(names)} skill(s) from {install_dir}:\n")
-        uninstall_skills(names, install_dir, dry_run=args.dry_run)
+        for target in targets:
+            install_dir = INSTALL_DIRS[target]
+            print(f"\nUninstalling {len(names)} skill(s) from {target} ({install_dir}):\n")
+            uninstall_skills(names, install_dir, dry_run=args.dry_run)
         return 0
 
     # Discover all skills in the repo
@@ -421,14 +418,18 @@ def main(argv: list[str] | None = None) -> int:
         print("[DRY RUN — no files will be written]\n")
     print()
 
-    install_skills(
-        skill_map=skill_map,
-        install_dir=install_dir,
-        target=target,
-        force=args.force,
-        dry_run=args.dry_run,
-        do_validate=args.validate,
-    )
+    for target in targets:
+        install_dir = INSTALL_DIRS[target]
+        print(f"\nTarget : {target}")
+        print(f"Install: {install_dir}")
+        install_skills(
+            skill_map=skill_map,
+            install_dir=install_dir,
+            target=target,
+            force=args.force,
+            dry_run=args.dry_run,
+            do_validate=args.validate,
+        )
 
     return 0
 
