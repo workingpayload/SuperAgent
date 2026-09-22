@@ -1,6 +1,6 @@
 {
   "name": "@workingpayload/agent-skills",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "Install portable AI-powered developer skills across Copilot, Claude, Codex, Gemini, and other agents",
   "bin": {
     "agent-skills": "./bin/cli.js"
