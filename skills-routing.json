@@ -1,7 +1,7 @@
 {
   "version": "1.0",
-  "generated_at": "2026-03-28T18:44:36+00:00",
-  "skill_count": 55,
+  "generated_at": "2026-11-10T17:56:03+00:00",
+  "skill_count": 56,
   "skills": [
     {
       "name": "accessplus",
@@ -112,6 +112,32 @@
         "auth",
         "system",
         "vulnerabilities"
+      ]
+    },
+    {
+      "name": "authorguard",
+      "description": "Ensures every git commit an AI agent creates is authored, committed, and signed solely as the human user — no AI co-author trailers, bot identities, or \"Generated with\" footers. Use when a user wants commits attributed only to themselves, asks to remove Copilot/Claude/Codex co-author lines, or wants their GPG/SSH signature on agent-made commits.",
+      "categories": [
+        "security",
+        "git",
+        "ai/ml"
+      ],
+      "triggers": [
+        "commits",
+        "attributed",
+        "only",
+        "themselves",
+        "remove",
+        "copilot",
+        "claude",
+        "codex",
+        "co-author",
+        "lines",
+        "their",
+        "gpg",
+        "ssh",
+        "signature",
+        "agent-made"
       ]
     },
     {

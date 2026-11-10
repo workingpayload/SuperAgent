@@ -18,7 +18,7 @@ npx @workingpayload/agent-skills install
 
 ## ✨ Features
 
-* 🧠 55 expert-level developer skills with named tools, concrete steps, and edge case coverage
+* 🧠 56 expert-level developer skills with named tools, concrete steps, and edge case coverage
 * 🤖 Multi-agent support (Copilot, Claude, Codex, Gemini, Google Antigravity, and the open Agent Skills standard)
 * 📦 CLI-first workflow with install, route, doctor, and score commands
 * 🔄 Versioning & health checks for installed skills
@@ -329,6 +329,7 @@ Run: `ruff check`, `mypy --strict`, `bandit -r .`...
 | Skill | Command | Description |
 | --- | --- | --- |
 | **CommitCraft** | `/commitcraft` | Conventional Commits v1.0.0 messages from git diff analysis |
+| **AuthorGuard** | `/authorguard` | Commits authored and signed only as you — no AI co-author trailers or bot identities |
 | **PRMentor** | `/prmentor` | PR reviews with severity tiers, scope checks, IaC review, and merge readiness checklist |
 | **IssueForge** | `/issueforge` | Structured bug reports and feature requests for GitHub Issues and Jira |
 
@@ -428,7 +429,7 @@ Agent Skills turns prompts into:
 
 ## 🚀 Roadmap
 
-* [x] 55 expert-level skills with edge case coverage
+* [x] 56 expert-level skills with edge case coverage
 * [x] CLI with install, route, doctor, score commands
 * [x] Quality tooling (linter, scorer, adversarial tests)
 * [x] Machine-readable skill index (skills.json)
